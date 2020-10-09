@@ -24,11 +24,11 @@ class CardStreamHandler implements EventChannel.StreamHandler {
     private BluetoothReader reader;
     private EventChannel.EventSink events;
     public String mTxtResponseApdu = "";
-    public boolean APDUResponseReceive = false;
     int currentPage = 1;
     boolean lockRead = false;
     String combineHex = "";
     boolean foundEoR = false;
+    String defaultHex = "";
 
 
     void setReader(final BluetoothReader reader) {
@@ -40,25 +40,34 @@ class CardStreamHandler implements EventChannel.StreamHandler {
                     new Handler(Looper.getMainLooper()).post(() -> {
                         if (events != null) {
                             String hexString = (Utils.toHexString(Arrays.copyOf(response, response.length - 2)).trim().replace(" ", ""));
-                            if (currentPage >= 5) {
-                                combineHex += hexString;
-                            }
-                            byte byteResponse[] = Utils.hexStringToByteArray(hexString);
-                            if (currentPage >= 5){
-                                for (byte b : byteResponse) {
-                                    if (b == (byte) 0x00) {
-                                        foundEoR = true;
-                                        break;
-                                        //Log.d(">>>Found FE", "LF stop here");
+                            if (hexString == "") {
+                                events.success("00000000000000000000000000000000");
+                            } else {
+                                if (currentPage >= 5) {
+                                    combineHex += hexString;
+                                } else {
+                                    defaultHex += hexString;
+                                }
+                                byte byteResponse[] = Utils.hexStringToByteArray(hexString);
+                                if (currentPage >= 5) {
+                                    for (byte b : byteResponse) {
+                                        if (b == (byte) 0x00) {
+                                            foundEoR = true;
+                                            break;
+                                            //Log.d(">>>Found FE", "LF stop here");
+                                        }
                                     }
                                 }
-                            }
-                            if (!foundEoR) {
-                                currentPage += 4;
-                                getTransmit(reader, currentPage);
-                            } else {
-                                Log.i(TAG,"Success");
-                                events.success(Utils.convertHexToString(combineHex.substring(10)));
+                                if (!foundEoR) {
+                                    currentPage += 4;
+                                    getTransmit(reader, currentPage);
+                                } else {
+                                    String escapToSend = "E00000280140";
+                                    byte[] apduByte = Utils.hexStringToByteArray(escapToSend);
+                                    reader.transmitEscapeCommand(apduByte);
+
+                                    events.success(Utils.convertHexToString(combineHex.substring(10)) + ":" + defaultHex);
+                                }
                             }
 
                         }
@@ -74,6 +83,7 @@ class CardStreamHandler implements EventChannel.StreamHandler {
 
 
             reader.setOnCardStatusChangeListener((bluetoothReader, cardStatusCode) -> {
+                defaultHex = "";
                 combineHex = "";
                 currentPage = 1;
                 lockRead = true;
