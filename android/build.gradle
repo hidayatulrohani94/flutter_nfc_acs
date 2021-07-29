@@ -1,4 +1,4 @@
-group 'com.nuvopoint.flutter_nfc_acs'
+group 'com.vnet.flutter_nfc_acs'
 version '1.0'
 
 buildscript {

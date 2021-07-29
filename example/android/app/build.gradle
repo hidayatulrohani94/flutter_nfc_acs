@@ -32,7 +32,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.nuvopoint.flutter_nfc_acs_example"
+        applicationId "com.vnet.flutter_nfc_acs_example"
         minSdkVersion 18
         targetSdkVersion 28
         versionCode flutterVersionCode.toInteger()
