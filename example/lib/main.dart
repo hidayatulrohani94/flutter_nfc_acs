@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:flutter_nfc_acs/flutter_nfc_acs.dart';
-import 'package:flutter_nfc_acs/models.dart';
+import 'package:flutter_acs_ble_reader/flutter_acs_ble_reader.dart';
+import 'package:flutter_acs_ble_reader/models.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(FlutterACSBleReaderApp());
 }
 
-class MyApp extends StatefulWidget {
+class FlutterACSBleReaderApp extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  _FlutterACSBleReaderAppState createState() => _FlutterACSBleReaderAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _FlutterACSBleReaderAppState extends State<FlutterACSBleReaderApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,19 +22,22 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Flutter NFC ACS'),
         ),
         body: StreamBuilder<List<AcsDevice>>(
-          stream: FlutterNfcAcs.devices.map((d) => (d.where((asc) => (asc.name?.indexOf('ACR') ?? -1) != -1)).toList()),
+          stream: FlutterAcsBleReader.devices.map((d) =>
+              (d.where((asc) => (asc.name?.indexOf('ACR') ?? -1) != -1))
+                  .toList()),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               print(snapshot.error);
               return Text('Error');
             } else if (snapshot.hasData) {
               return ListView.builder(
-                itemCount: snapshot.data.length,
+                itemCount: snapshot.data!.length,
                 itemBuilder: (context, i) {
-                  final item = snapshot.data[i];
-                  return RaisedButton(
+                  final item = snapshot.data![i];
+                  return ElevatedButton(
                     key: ValueKey(item.address),
-                    child: Text((item.name ?? 'No name') + ' -- ' + item.address),
+                    child:
+                        Text((item.name ?? 'No name') + ' -- ' + item.address),
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -55,7 +58,10 @@ class _MyAppState extends State<MyApp> {
 }
 
 class DeviceRoute extends StatefulWidget {
-  const DeviceRoute({Key key, @required this.device}) : super(key: key);
+  const DeviceRoute({
+    Key? key,
+    required this.device,
+  }) : super(key: key);
 
   final AcsDevice device;
 
@@ -64,17 +70,18 @@ class DeviceRoute extends StatefulWidget {
 }
 
 class _DeviceRouteState extends State<DeviceRoute> {
-  String connection = FlutterNfcAcs.DISCONNECTED;
-  String error;
-  StreamSubscription _sub;
+  String connection = FlutterAcsBleReader.DISCONNECTED;
+  String? error;
+  StreamSubscription? _sub;
 
   @override
   void initState() {
     super.initState();
 
-    FlutterNfcAcs.connect(widget.device.address).catchError((err) => setState(() => error = err));
+    FlutterAcsBleReader.connect(widget.device.address)
+        .catchError((err) => setState(() => error = err));
 
-    _sub = FlutterNfcAcs.connectionStatus.listen((status) {
+    _sub = FlutterAcsBleReader.connectionStatus.listen((status) {
       setState(() {
         connection = status;
       });
@@ -88,15 +95,18 @@ class _DeviceRouteState extends State<DeviceRoute> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            RaisedButton(
-              child: Text(connection == FlutterNfcAcs.DISCONNECTED ? 'Connect' : 'Disconnect'),
-              onPressed: () => connection == FlutterNfcAcs.DISCONNECTED
-                  ? FlutterNfcAcs.connect(widget.device.address).catchError((err) => setState(() => error = err))
-                  : FlutterNfcAcs.disconnect(),
+            ElevatedButton(
+              child: Text(connection == FlutterAcsBleReader.DISCONNECTED
+                  ? 'Connect'
+                  : 'Disconnect'),
+              onPressed: () => connection == FlutterAcsBleReader.DISCONNECTED
+                  ? FlutterAcsBleReader.connect(widget.device.address)
+                      .catchError((err) => setState(() => error = err))
+                  : FlutterAcsBleReader.disconnect(),
             ),
-            Text(widget.device?.name ?? 'No name'),
+            Text(widget.device.name ?? 'No name'),
             StreamBuilder<int>(
-              stream: FlutterNfcAcs.batteryStatus,
+              stream: FlutterAcsBleReader.batteryStatus,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.active)
                   return Text('Battery level: ' + snapshot.data.toString());
@@ -105,42 +115,34 @@ class _DeviceRouteState extends State<DeviceRoute> {
               },
             ),
             StreamBuilder<String>(
-              stream: FlutterNfcAcs.cards,
+              stream: FlutterAcsBleReader.cards,
               builder: (context, snapshot) {
                 switch (snapshot.connectionState) {
                   case ConnectionState.none:
                     return Text('Card: no connection');
-                    break;
                   case ConnectionState.waiting:
                     return Text('Card: waiting');
-                    break;
                   case ConnectionState.active:
                     return Text('Card: ' + snapshot.data.toString());
-                    break;
                   case ConnectionState.done:
                     return Text('Card: done');
-                    break;
                   default:
                     return Text('Card: unknown state');
                 }
               },
             ),
             StreamBuilder<String>(
-              stream: FlutterNfcAcs.connectionStatus,
+              stream: FlutterAcsBleReader.connectionStatus,
               builder: (context, snapshot) {
                 switch (snapshot.connectionState) {
                   case ConnectionState.none:
                     return Text('Connection: nope');
-                    break;
                   case ConnectionState.waiting:
                     return Text('Connection: waiting');
-                    break;
                   case ConnectionState.active:
                     return Text('Connection: ' + snapshot.data.toString());
-                    break;
                   case ConnectionState.done:
                     return Text('Connection: done');
-                    break;
                   default:
                     return Text('Connection: unknown state');
                 }
@@ -155,7 +157,7 @@ class _DeviceRouteState extends State<DeviceRoute> {
   @override
   void dispose() {
     _sub?.cancel();
-    FlutterNfcAcs.disconnect();
+    FlutterAcsBleReader.disconnect();
     super.dispose();
   }
 }

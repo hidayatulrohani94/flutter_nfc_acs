@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_nfc_acs/models.dart';
+import 'package:flutter_acs_ble_reader/models.dart';
 
-class FlutterNfcAcs {
+class FlutterAcsBleReader {
   static const MethodChannel _channel =
       const MethodChannel('flutter.nuvopoint.com/nfc/acs');
   static const EventChannel _devicesChannel =
